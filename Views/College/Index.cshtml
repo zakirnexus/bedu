@@ -1,0 +1,252 @@
+@model IEnumerable<SchoolProject.Models.Colleges.College>
+
+@{
+    string courseName = ViewBag.CourseName as string ?? ViewBag.Category as string ?? "Colleges";
+    string cityName = ViewBag.CityName as string ?? "Bengaluru";
+    int totalRecords = ViewBag.TotalRecords is int tr ? tr : 0;
+    int totalPages = ViewBag.TotalPages is int tp ? tp : 0;
+    int currentPage = ViewBag.CurrentPage is int cp ? cp : 1;
+    string courseSlug = ViewBag.Course as string ?? "colleges";
+    string citySlug = ViewBag.City as string ?? "bengaluru";
+
+    bool filtersActive = ViewBag.FiltersActive is bool fa && fa;
+
+    int? selLocality = ViewBag.SelLocality as int?;
+    string selNsewc = ViewBag.SelNsewc as string ?? "";
+    int? selCoed = ViewBag.SelCoed as int?;
+    int? selOwnership = ViewBag.SelOwnership as int?;
+    string selFees = ViewBag.SelFees as string ?? "";
+
+    string bottomContent = ViewBag.BottomContent as string ?? "";
+}
+
+@section MetaTags {
+    <title>@(ViewBag.Title as string ?? courseName + " Colleges in " + cityName)</title>
+    <meta name="description" content="@(ViewBag.Description as string ?? "Explore colleges in " + cityName)" />
+}
+
+<!-- Results count -->
+@if (totalRecords > 0)
+{
+    var start = (currentPage - 1) * 10 + 1;
+    var end   = Math.Min(start + Model.Count() - 1, totalRecords);
+    <div class="results-count" style="margin:10px 0; font-size:14px;">
+        Showing <strong>@start–@end</strong> of
+        <strong>@totalRecords</strong>
+        @courseName Colleges in @cityName
+
+        @if (filtersActive)
+        {
+            <span style="margin-left:8px; background:#e8f0fe; color:#1a56db; font-size:12px;
+                         font-weight:600; padding:2px 10px; border-radius:12px; border:1px solid #c3d3f8;">
+                Filtered
+            </span>
+        }
+    </div>
+}
+else
+{
+    <div class="alert alert-info" style="margin-top:10px;">
+        No colleges found matching your filters.
+        @if (filtersActive)
+        {
+            <a href="/@(courseSlug)-colleges-in-@(citySlug)" style="margin-left:6px;">Clear all filters</a>
+        }
+    </div>
+}
+
+<!-- College List -->
+@if (Model != null && Model.Any())
+{
+    foreach (var college in Model)
+    {
+        <aside><section class="events"><div class="section-content"><article class="event" style="margin-bottom:-10px;">
+
+        <div class="panel panel-default">
+            <div class="panel-body">
+
+                @if (!string.IsNullOrEmpty(college.Logo))
+                {
+                    <figure class="date">
+                        <a href="/college/@college.InstituteSlug">
+                            <img src="@college.Logo"
+                                 alt="@college.InstituteName - Logo"
+                                 title="@college.InstituteName logo"
+                                 width="70" height="70">
+                        </a>
+                    </figure>
+                }
+
+                <h3>
+                    <a href="/college/@college.InstituteSlug">@college.InstituteName</a>
+                </h3>
+
+                @if (college.IsSponsored)
+                {
+                    <span style="display:inline-block; background:#fffbeb; color:#92400e; font-size:11px;
+                                 font-weight:600; padding:2px 8px; border-radius:4px;
+                                 border:1px solid #fcd34d; margin-left:8px; vertical-align:middle;">
+                        ⭐ Featured
+                    </span>
+                }
+
+                <div class="additional-info">
+                    <span class="fa fa-map-marker">&nbsp;</span>
+                    @college.Address, @college.Locality?.LocalityName, @college.City?.CityName
+                    @if (!string.IsNullOrEmpty(college.Pincode)) { <text>- @college.Pincode</text> }
+                </div>
+
+                @if (!string.IsNullOrEmpty(college.Estd))
+                {
+                    <span style="font-size:12px;"><strong>Established:</strong> @college.Estd;</span>
+                }
+
+                @if (!string.IsNullOrEmpty(college.AffiliatedTo))
+                {
+                    <span style="font-size:12px;"><strong>Affiliated to:</strong> @college.AffiliatedTo;</span>
+                }
+
+                @if (!string.IsNullOrEmpty(college.ApprovedBy))
+                {
+                    <span style="font-size:12px;"><strong>Approved by:</strong> @college.ApprovedBy;</span>
+                }
+
+                <div style="margin-top:6px;">
+                    @if (college.NaacGrade != null)
+                    {<span class="label label-success" style="margin-right:3px;">NAAC @college.NaacGrade</span>}
+                    @if (college.NbaAccredited)
+                    {<span class="label label-info" style="margin-right:3px;">NBA</span>}
+                    @if (college.HostelAvailable)
+                    {<span class="label label-default" style="margin-right:3px;">Hostel</span>}
+                    @if (college.ScholarshipAvailable)
+                    {<span class="label label-primary" style="margin-right:3px;">Scholarship</span>}
+                    @if (college.PlacementPercentage.HasValue)
+                    {<span class="label label-success" style="margin-right:3px;">Placement: @college.PlacementPercentage%</span>}
+                    @if (college.AvgPackageLpa.HasValue)
+                    {<span class="label label-default" style="margin-right:3px;">Avg Pkg: ₹@college.AvgPackageLpa LPA</span>}
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(college.Photos))
+        {
+            <section class="campus-photo">
+                <p><img src="@college.Photos" class="img-fluid add-margin"
+                        alt="@college.InstituteName - campus"
+                        title="@college.InstituteName campus"></p>
+            </section>
+        }
+
+        <ul>
+            @if (college.CollegeCourses != null)
+            {
+                var courseNames = new List<string>();
+                foreach (var cc in college.CollegeCourses)
+                {
+                    if (cc.IsActive && cc.Course != null && !string.IsNullOrEmpty(cc.Course.CourseName))
+                    {
+                        var label = cc.Course.CourseName;
+                        if (cc.SpecializationNav != null && !string.IsNullOrEmpty(cc.SpecializationNav.SpecializationName))
+                            label += " - " + cc.SpecializationNav.SpecializationName;
+                        courseNames.Add(label);
+                    }
+                }
+                if (courseNames.Any())
+                {
+                    <li class="list-group-item">
+                        <strong>Courses:</strong>&nbsp;
+                        @for (int i = 0; i < Math.Min(courseNames.Count, 5); i++)
+                        {
+                            <span class="label label-default" style="margin-right:3px; font-weight:normal;">@courseNames[i]</span>
+                        }
+                        @if (courseNames.Count > 5)
+                        {
+                            <span class="label label-default" style="font-weight:normal;">+@(courseNames.Count - 5) more</span>
+                        }
+                    </li>
+                }
+            }
+            @if (!string.IsNullOrEmpty(college.MetaDescription))
+            {
+                <li class="list-group-item"><strong>Institute Brief:</strong> @college.MetaDescription</li>
+            }
+        </ul>
+
+        <div class="action-buttons">
+            <a href="/college/@college.InstituteSlug" class="btn btn-info">View Details</a>
+            <a href="javascript:void(0);"
+               class="btn btn-primary btn-enquiry"
+               data-id="@college.InstituteId"
+               data-college="@college.InstituteName">
+                Enquire Now
+            </a>
+        </div>
+
+        </article></div><hr /></section></aside>
+    }
+
+    <!-- Pagination -->
+    @if (totalPages > 1)
+    {
+        <nav style="text-align:center;">
+            <ul class="pagination">
+                @if (currentPage > 1)
+                {
+                    string prevUrl = "/" + courseSlug + "-colleges-in-" + citySlug + "?page=" + (currentPage - 1)
+                        + (selLocality.HasValue ? "&locality=" + selLocality.Value : "")
+                        + (!string.IsNullOrEmpty(selNsewc) ? "&nsewc=" + Uri.EscapeDataString(selNsewc) : "")
+                        + (selCoed.HasValue ? "&coedId=" + selCoed.Value : "")
+                        + (selOwnership.HasValue ? "&ownershipId=" + selOwnership.Value : "")
+                        + (!string.IsNullOrEmpty(selFees) ? "&feesRange=" + Uri.EscapeDataString(selFees) : "");
+                    <li><a href="@prevUrl">&laquo; Prev</a></li>
+                }
+                @for (int i = 1; i <= totalPages; i++)
+                {
+                    string pageUrl = "/" + courseSlug + "-colleges-in-" + citySlug + "?page=" + i
+                        + (selLocality.HasValue ? "&locality=" + selLocality.Value : "")
+                        + (!string.IsNullOrEmpty(selNsewc) ? "&nsewc=" + Uri.EscapeDataString(selNsewc) : "")
+                        + (selCoed.HasValue ? "&coedId=" + selCoed.Value : "")
+                        + (selOwnership.HasValue ? "&ownershipId=" + selOwnership.Value : "")
+                        + (!string.IsNullOrEmpty(selFees) ? "&feesRange=" + Uri.EscapeDataString(selFees) : "");
+
+                    if (i == currentPage)
+                    {
+                        <li class="active"><a href="@pageUrl">@i</a></li>
+                    }
+                    else
+                    {
+                        <li><a href="@pageUrl">@i</a></li>
+                    }
+                }
+                @if (currentPage < totalPages)
+                {
+                    string nextUrl = "/" + courseSlug + "-colleges-in-" + citySlug + "?page=" + (currentPage + 1)
+                        + (selLocality.HasValue ? "&locality=" + selLocality.Value : "")
+                        + (!string.IsNullOrEmpty(selNsewc) ? "&nsewc=" + Uri.EscapeDataString(selNsewc) : "")
+                        + (selCoed.HasValue ? "&coedId=" + selCoed.Value : "")
+                        + (selOwnership.HasValue ? "&ownershipId=" + selOwnership.Value : "")
+                        + (!string.IsNullOrEmpty(selFees) ? "&feesRange=" + Uri.EscapeDataString(selFees) : "");
+                    <li><a href="@nextUrl">Next &raquo;</a></li>
+                }
+            </ul>
+        </nav>
+    }
+}
+else
+{
+    <div class="alert alert-warning">
+        <i class="fa fa-exclamation-circle"></i>
+        No colleges found for the selected criteria.
+        @if (filtersActive)
+        {
+            <span><a href="/@(courseSlug)-colleges-in-@(citySlug)">Clear filters</a> to see all colleges.</span>
+        }
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(bottomContent))
+{
+    <div style="margin-top:20px; font-size:14px; line-height:1.6;">
+        @Html.Raw(bottomContent)
+    </div>
+}
